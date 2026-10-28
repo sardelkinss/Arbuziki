@@ -113,12 +113,21 @@ loginButton.addEventListener("click", async () => {
 
   try {
     const { data, error } =
+  try {
   const { data, error } =
-  await supabaseClient.auth.signInWithPassword(credentials)
-    if (error) {
-      showMessage("Ошибка входа: " + error.message);
+    await supabaseClient.auth.signInWithPassword(credentials);
+
+  if (error) {
+    showMessage("Ошибка входа: " + error.message);
   } else if (data.user) {
-  showCabinet(data.user);
+    showCabinet(data.user);
+  }
+} catch (error) {
+  console.error(error);
+  showMessage("Не удалось связаться с Supabase.");
+} finally {
+  loginButton.disabled = false;
+  registerButton.disabled = false;
 }
     }
   } catch (error) {
