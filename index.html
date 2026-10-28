@@ -3,66 +3,184 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Арбузный архив</title>
+  <title>Арбузный архив 🍉</title>
+
   <style>
-    * { box-sizing: border-box; }
+    * {
+      box-sizing: border-box;
+    }
+
     body {
       margin: 0;
-      padding: 24px;
       min-height: 100vh;
       font-family: Arial, sans-serif;
-      background: #f4fff4;
-      color: #203b2b;
+      background: linear-gradient(135deg, #fff5a8, #ffb6b9);
+      color: #253323;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
     }
+
     .card {
-      max-width: 650px;
-      margin: 40px auto;
-      padding: 28px;
-      background: white;
-      border-radius: 18px;
-      box-shadow: 0 5px 25px #183b2015;
-    }
-    h1 { color: #218545; }
-    input, button, textarea {
       width: 100%;
-      padding: 12px;
-      margin: 7px 0;
-      border: 1px solid #cbdccb;
-      border-radius: 9px;
-      font: inherit;
+      max-width: 520px;
+      background: rgba(255, 255, 255, 0.94);
+      padding: 28px;
+      border-radius: 24px;
+      box-shadow: 0 10px 35px #0002;
+      text-align: center;
     }
+
+    .watermelon {
+      font-size: 65px;
+      margin-bottom: 10px;
+    }
+
+    h1 {
+      margin: 0 0 10px;
+      color: #168447;
+    }
+
+    h2 {
+      color: #168447;
+      margin-top: 10px;
+    }
+
+    p {
+      color: #586358;
+      line-height: 1.5;
+    }
+
+    input, textarea, button {
+      width: 100%;
+      padding: 13px;
+      margin-top: 12px;
+      border-radius: 12px;
+      font-size: 16px;
+      font-family: inherit;
+    }
+
+    input, textarea {
+      border: 1px solid #ccc;
+      outline-color: #168447;
+      background: #fff;
+      color: #253323;
+    }
+
+    textarea {
+      min-height: 180px;
+      resize: vertical;
+      line-height: 1.5;
+    }
+
     button {
-      background: #218545;
+      border: none;
+      background: #168447;
       color: white;
-      border: 0;
       cursor: pointer;
+      font-weight: bold;
+      transition: background 0.2s, transform 0.2s;
     }
-    button:disabled { opacity: 0.6; }
-    .hidden { display: none; }
-    #message { overflow-wrap: anywhere; }
+
+    button:hover {
+      background: #106735;
+      transform: translateY(-1px);
+    }
+
+    button:disabled {
+      opacity: 0.6;
+      cursor: wait;
+      transform: none;
+    }
+
+    #message {
+      min-height: 20px;
+      font-size: 14px;
+      overflow-wrap: anywhere;
+    }
+
+    .small {
+      font-size: 12px;
+      color: #777;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .divider {
+      height: 1px;
+      background: #e8e8e8;
+      margin: 22px 0;
+    }
+
+    .logout {
+      background: #e66b70;
+    }
+
+    .logout:hover {
+      background: #ca5056;
+    }
+
+    .subtitle {
+      margin-bottom: 20px;
+    }
+
+    @media (max-width: 480px) {
+      .card {
+        padding: 22px 18px;
+      }
+
+      .watermelon {
+        font-size: 56px;
+      }
+    }
   </style>
 </head>
+
 <body>
   <main class="card">
-    <h1>🍉 Арбузный архив</h1>
-    <p id="message">Загрузка...</p>
+    <div class="watermelon">🍉</div>
+    <h1>Арбузный архив</h1>
+    <p class="subtitle">Твоё личное место для заметок, мыслей и секретов.</p>
 
     <section id="auth">
-      <input id="email" type="email" placeholder="Электронная почта">
-      <input id="password" type="password" placeholder="Пароль">
+      <input
+        id="email"
+        type="email"
+        placeholder="Электронная почта"
+        autocomplete="email"
+      >
+
+      <input
+        id="password"
+        type="password"
+        placeholder="Пароль"
+        autocomplete="current-password"
+      >
+
       <button id="loginButton">Войти</button>
       <button id="registerButton">Создать аккаунт</button>
     </section>
 
     <section id="cabinet" class="hidden">
-      <h2>Твой архив</h2>
+      <div class="divider"></div>
+      <h2>Мой архив 📚</h2>
       <p id="userEmail"></p>
-      <textarea id="note" rows="5"
-        placeholder="Напиши что-нибудь..."></textarea>
+      <p>Записывай сюда свои мысли и идеи.</p>
+
+      <textarea
+        id="note"
+        placeholder="Напиши свою заметку..."
+      ></textarea>
+
       <button id="saveButton">Сохранить заметку</button>
-      <button id="logoutButton">Выйти</button>
-      <p>Заметки подключим следующим шагом.</p>
+      <button id="logoutButton" class="logout">Выйти из аккаунта</button>
     </section>
+
+    <p id="message" aria-live="polite">Войди или создай аккаунт.</p>
+    <p class="small">Арбузный архив · Твоё личное пространство 🍉</p>
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
