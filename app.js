@@ -147,19 +147,29 @@ saveButton.addEventListener("click", () => {
 });
 
 async function startApp() {
-  if (!initializeSupabase()) return;
+  try {
+    if (!initializeSupabase()) return;
 
-  const { data, error } = await supabaseClient.auth.getSession();
+    showMessage("Проверяем вход...");
 
-  if (error) {
-    showMessage("Не удалось проверить вход.");
-    return;
-  }
+    const { data, error } = await supabaseClient.auth.getSession();
 
-  if (data.session) {
-    showCabinet(data.session.user);
-  } else {
+    if (error) {
+      console.error("Ошибка сессии:", error);
+      showAuth();
+      showMessage("Не удалось проверить вход: " + error.message);
+      return;
+    }
+
+    if (data.session) {
+      showCabinet(data.session.user);
+    } else {
+      showAuth();
+    }
+  } catch (error) {
+    console.error("Ошибка запуска:", error);
     showAuth();
+    showMessage("Ошибка запуска: " + error.message);
   }
 }
 
