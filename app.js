@@ -41,58 +41,6 @@ function initializeSupabase() {
     showMessage("Не удалось подключить Supabase.");
     return false;
   }
-}function initializeSupabase() {
-  if (supabaseClient) return true;
-
-  if (!window.supabase || !window.supabase.createClient) {
-    showMessage("Не загрузилась библиотека Supabase. Обнови страницу.");
-    return false;
-  }
-
-  if (
-    typeof SUPABASE_URL === "undefined" ||
-    typeof SUPABASE_KEY === "undefined" ||
-    !SUPABASE_URL ||
-    !SUPABASE_KEY
-  ) {
-    showMessage("Проверь настройки в файле config.js.");
-    return false;
-  }
-
-  try {
-    supabaseClient = window.supabase.createClient(
-      SUPABASE_URL,
-      SUPABASE_KEY
-    );
-    return true;
-  } catch (error) {
-    console.error("Ошибка подключения:", error);
-    showMessage("Не удалось подключить Supabase.");
-    return false;
-  }
-}
-
- if (
-    typeof SUPABASE_URL === "undefined" ||
-    typeof SUPABASE_KEY === "undefined" ||
-    !SUPABASE_URL ||
-    !SUPABASE_KEY
-  ) {
-    showMessage("Проверь настройки в файле config.js.");
-    return false;
-  }
-
-  try {
-    supabaseClient = window.supabase.createClient(
-      SUPABASE_URL,
-      SUPABASE_KEY
-    );
-    return true;
-  } catch (error) {
-    console.error("Ошибка подключения:", error);
-    showMessage("Не удалось подключить Supabase.");
-    return false;
-  }
 }
 
 function getCredentials() {
@@ -139,8 +87,8 @@ registerButton.addEventListener("click", async () => {
       showMessage("Аккаунт создан! Проверь почту для подтверждения.");
     }
   } catch (error) {
-    console.error(error);
-    showMessage("Не удалось связаться с Supabase. Проверь настройки и интернет.");
+    console.error("Ошибка регистрации:", error);
+    showMessage("Не удалось связаться с Supabase. Проверь интернет.");
   } finally {
     registerButton.disabled = false;
     loginButton.disabled = false;
@@ -172,8 +120,8 @@ loginButton.addEventListener("click", async () => {
       showMessage("Вход выполнен успешно!");
     }
   } catch (error) {
-    console.error(error);
-    showMessage("Не удалось связаться с Supabase. Проверь настройки и интернет.");
+    console.error("Ошибка входа:", error);
+    showMessage("Не удалось связаться с Supabase. Проверь интернет.");
   } finally {
     loginButton.disabled = false;
     registerButton.disabled = false;
