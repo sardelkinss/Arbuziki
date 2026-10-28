@@ -111,9 +111,7 @@ loginButton.addEventListener("click", async () => {
   registerButton.disabled = true;
   showMessage("Выполняем вход...");
 
-  try {
-    const { data, error } =
-  try {
+ try {
   const { data, error } =
     await supabaseClient.auth.signInWithPassword(credentials);
 
@@ -122,6 +120,13 @@ loginButton.addEventListener("click", async () => {
   } else if (data.user) {
     showCabinet(data.user);
   }
+} catch (error) {
+  console.error(error);
+  showMessage("Не удалось связаться с Supabase.");
+} finally {
+  loginButton.disabled = false;
+  registerButton.disabled = false;
+}
 } catch (error) {
   console.error(error);
   showMessage("Не удалось связаться с Supabase.");
