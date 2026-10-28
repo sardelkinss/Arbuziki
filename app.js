@@ -41,7 +41,9 @@ function initializeSupabase() {
 
   if (
     typeof SUPABASE_URL === "undefined" ||
-    typeof SUPABASE_KEY === "undefined"
+    typeof SUPABASE_KEY === "undefined" ||
+    !SUPABASE_URL ||
+    !SUPABASE_KEY
   ) {
     showMessage("Проверь файл config.js.");
     return false;
@@ -83,7 +85,8 @@ registerButton.addEventListener("click", async () => {
   showMessage("Создаём аккаунт...");
 
   try {
-    const { data, error } = await supabaseClient.auth.signUp(credentials);
+    const { data, error } =
+      await supabaseClient.auth.signUp(credentials);
 
     if (error) {
       showMessage("Ошибка регистрации: " + error.message);
@@ -93,8 +96,8 @@ registerButton.addEventListener("click", async () => {
       showMessage("Проверь почту для подтверждения регистрации.");
     }
   } catch (error) {
-    console.error(error);
-    showMessage("Не удалось связаться с сервером.");
+    console.error("Ошибка регистрации:", error);
+    showMessage("Не удалось связаться с Supabase.");
   } finally {
     registerButton.disabled = false;
     loginButton.disabled = false;
@@ -111,33 +114,20 @@ loginButton.addEventListener("click", async () => {
   registerButton.disabled = true;
   showMessage("Выполняем вход...");
 
- try {
-  const { data, error } =
-    await supabaseClient.auth.signInWithPassword(credentials);
+  try {
+    const { data, error } =
+      await supabaseClient.auth.signInWithPassword(credentials);
 
-  if (error) {
-    showMessage("Ошибка входа: " + error.message);
-  } else if (data.user) {
-    showCabinet(data.user);
-  }
-} catch (error) {
-  console.error(error);
-  showMessage("Не удалось связаться с Supabase.");
-} finally {
-  loginButton.disabled = false;
-  registerButton.disabled = false;
-}
-} catch (error) {
-  console.error(error);
-  showMessage("Не удалось связаться с Supabase.");
-} finally {
-  loginButton.disabled = false;
-  registerButton.disabled = false;
-}
+    if (error) {
+      showMessage("Ошибка входа: " + error.message);
+    } else if (data.user) {
+      showCabinet(data.user);
+    } else {
+      showMessage("Не удалось получить данные аккаунта.");
     }
   } catch (error) {
-    console.error(error);
-    showMessage("Не удалось связаться с сервером.");
+    console.error("Ошибка входа:", error);
+    showMessage("Не удалось связаться с Supabase.");
   } finally {
     loginButton.disabled = false;
     registerButton.disabled = false;
@@ -145,15 +135,22 @@ loginButton.addEventListener("click", async () => {
 });
 
 logoutButton.addEventListener("click", async () => {
-  const { error } = await supabaseClient.auth.signOut();
+  if (!initializeSupabase()) return;
 
-  if (error) {
-    showMessage("Ошибка выхода: " + error.message);
-    return;
+  try {
+    const { error } = await supabaseClient.auth.signOut();
+
+    if (error) {
+      showMessage("Ошибка выхода: " + error.message);
+      return;
+    }
+
+    note.value = "";
+    showAuth();
+  } catch (error) {
+    console.error("Ошибка выхода:", error);
+    showMessage("Не удалось выполнить выход.");
   }
-
-  note.value = "";
-  showAuth();
 });
 
 saveButton.addEventListener("click", () => {
@@ -161,11 +158,11 @@ saveButton.addEventListener("click", () => {
 });
 
 async function startApp() {
+  if (!initializeSupabase()) return;
+
+  showMessage("Проверяем вход...");
+
   try {
-    if (!initializeSupabase()) return;
-
-    showMessage("Проверяем вход...");
-
     const { data, error } = await supabaseClient.auth.getSession();
 
     if (error) {
