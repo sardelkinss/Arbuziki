@@ -3,113 +3,70 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Арбузный архив 🍉</title>
+  <title>Арбузный архив</title>
   <style>
-    * {
-      box-sizing: border-box;
-    }
-
+    * { box-sizing: border-box; }
     body {
       margin: 0;
+      padding: 24px;
       min-height: 100vh;
       font-family: Arial, sans-serif;
-      background: linear-gradient(135deg, #fff5a8, #ffb6b9);
-      color: #253323;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      padding: 20px;
+      background: #f4fff4;
+      color: #203b2b;
     }
-
     .card {
-      width: 100%;
-      max-width: 420px;
-      background: rgba(255, 255, 255, 0.9);
+      max-width: 650px;
+      margin: 40px auto;
       padding: 28px;
-      border-radius: 24px;
-      box-shadow: 0 10px 35px #0002;
-      text-align: center;
+      background: white;
+      border-radius: 18px;
+      box-shadow: 0 5px 25px #183b2015;
     }
-
-    .watermelon {
-      font-size: 65px;
-      margin-bottom: 10px;
-    }
-
-    h1 {
-      margin: 0 0 10px;
-      color: #168447;
-    }
-
-    p {
-      color: #586358;
-      line-height: 1.5;
-    }
-
-    input, button {
+    h1 { color: #218545; }
+    input, button, textarea {
       width: 100%;
-      padding: 13px;
-      margin-top: 12px;
-      border-radius: 12px;
-      font-size: 16px;
+      padding: 12px;
+      margin: 7px 0;
+      border: 1px solid #cbdccb;
+      border-radius: 9px;
+      font: inherit;
     }
-
-    input {
-      border: 1px solid #ccc;
-      outline-color: #168447;
-    }
-
     button {
-      border: none;
-      background: #168447;
+      background: #218545;
       color: white;
+      border: 0;
       cursor: pointer;
-      font-weight: bold;
     }
-
-    button:hover {
-      background: #106735;
-    }
-
-    #message {
-      min-height: 20px;
-      font-size: 14px;
-    }
-
-    .small {
-      font-size: 12px;
-      color: #777;
-    }
+    button:disabled { opacity: 0.6; }
+    .hidden { display: none; }
+    #message { overflow-wrap: anywhere; }
   </style>
 </head>
 <body>
   <main class="card">
-    <div class="watermelon">🍉</div>
-    <h1>Арбузный архив</h1>
-    <p>Твоё личное место для заметок, мыслей и секретов.</p>
+    <h1>🍉 Арбузный архив</h1>
+    <p id="message">Загрузка...</p>
 
-    <input
-      id="email"
-      type="email"
-      placeholder="Электронная почта"
-      autocomplete="email"
-    >
+    <section id="auth">
+      <input id="email" type="email" placeholder="Электронная почта">
+      <input id="password" type="password" placeholder="Пароль">
+      <button id="loginButton">Войти</button>
+      <button id="registerButton">Создать аккаунт</button>
+    </section>
 
-    <input
-      id="password"
-      type="password"
-      placeholder="Пароль"
-      autocomplete="current-password"
-    >
-
-    <button id="loginButton">Войти</button>
-    <button id="registerButton">Создать аккаунт</button>
-
-    <p id="message">Сначала создайте аккаунт.</p>
-    <p class="small">Арбузный архив · Версия 1.0</p>
+    <section id="cabinet" class="hidden">
+      <h2>Твой архив</h2>
+      <p id="userEmail"></p>
+      <textarea id="note" rows="5"
+        placeholder="Напиши что-нибудь..."></textarea>
+      <button id="saveButton">Сохранить заметку</button>
+      <button id="logoutButton">Выйти</button>
+      <p>Заметки подключим следующим шагом.</p>
+    </section>
   </main>
-     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="config.js"></script>
-<script src="app.js"></script>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
+  <script src="app.js"></script>
 </body>
 </html>
