@@ -113,8 +113,8 @@ loginButton.addEventListener("click", async () => {
 
   try {
     const { data, error } =
-      await supabaseClient.auth.signInWithPassword(credentials);
-
+  const { data, error } =
+  await supabaseClient.auth.signInWithPassword(credentials)
     if (error) {
       showMessage("Ошибка входа: " + error.message);
     } else if (data.user) {
