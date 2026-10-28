@@ -72,7 +72,7 @@ function initializeSupabase() {
   }
 }
 
-  if (
+ if (
     typeof SUPABASE_URL === "undefined" ||
     typeof SUPABASE_KEY === "undefined" ||
     !SUPABASE_URL ||
