@@ -168,8 +168,55 @@
       <div class="divider"></div>
       <h2>Мой архив 📚</h2>
       <p id="userEmail"></p>
-      <p>Записывай сюда свои мысли и идеи.</p>
+   <div class="archive-nav">
+  <button type="button" class="nav-btn active" data-page="home">🏠 Главная</button>
+  <button type="button" class="nav-btn" data-page="notes">📝 Заметки</button>
+  <button type="button" class="nav-btn" data-page="history">🕘 История</button>
+  <button type="button" class="nav-btn" data-page="profile">👤 Профиль</button>
+  <button type="button" class="nav-btn" data-page="settings">⚙️ Настройки</button>
+</div>
 
+<div id="archiveHome" class="archive-page">
+  <h3>Добро пожаловать в архив 🍉</h3>
+  <p>Твоё личное пространство для мыслей, идей и планов.</p>
+  <div class="archive-stats">
+    <div class="stat-card">
+      <span>📚</span>
+      <strong id="notesCount">0</strong>
+      <small>Заметок</small>
+    </div>
+    <div class="stat-card">
+      <span>✍️</span>
+      <strong>∞</strong>
+      <small>Идей для записи</small>
+    </div>
+  </div>
+  <button type="button" id="newNoteButton">＋ Новая заметка</button>
+</div>
+
+<div id="archiveNotes" class="archive-page hidden">
+  <h3>📝 Мои заметки</h3>
+  <input id="noteTitle" type="text" placeholder="Название заметки">
+  <textarea id="note" rows="7" placeholder="Запиши свою мысль..."></textarea>
+  <button type="button" id="saveButton">Сохранить заметку</button>
+  <div id="notesList"></div>
+</div>
+
+<div id="archiveHistory" class="archive-page hidden">
+  <h3>🕘 История</h3>
+  <p>Здесь будут отображаться сохранённые заметки.</p>
+</div>
+
+<div id="archiveProfile" class="archive-page hidden">
+  <h3>👤 Профиль</h3>
+  <p id="profileEmail"></p>
+</div>
+
+<div id="archiveSettings" class="archive-page hidden">
+  <h3>⚙️ Настройки</h3>
+  <p>Настройки твоего личного архива.</p>
+  <button type="button" id="logoutButton" class="logout">Выйти из аккаунта</button>
+</div>
       <textarea
         id="note"
         placeholder="Напиши свою заметку..."
