@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Арбузный архив 🍉</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #fff5a8, #ffb6b9);
+      color: #253323;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+
+    .card {
+      width: 100%;
+      max-width: 420px;
+      background: rgba(255, 255, 255, 0.9);
+      padding: 28px;
+      border-radius: 24px;
+      box-shadow: 0 10px 35px #0002;
+      text-align: center;
+    }
+
+    .watermelon {
+      font-size: 65px;
+      margin-bottom: 10px;
+    }
+
+    h1 {
+      margin: 0 0 10px;
+      color: #168447;
+    }
+
+    p {
+      color: #586358;
+      line-height: 1.5;
+    }
+
+    input, button {
+      width: 100%;
+      padding: 13px;
+      margin-top: 12px;
+      border-radius: 12px;
+      font-size: 16px;
+    }
+
+    input {
+      border: 1px solid #ccc;
+      outline-color: #168447;
+    }
+
+    button {
+      border: none;
+      background: #168447;
+      color: white;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    button:hover {
+      background: #106735;
+    }
+
+    #message {
+      min-height: 20px;
+      font-size: 14px;
+    }
+
+    .small {
+      font-size: 12px;
+      color: #777;
+    }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <div class="watermelon">🍉</div>
+    <h1>Арбузный архив</h1>
+    <p>Твоё личное место для заметок, мыслей и секретов.</p>
+
+    <input
+      id="email"
+      type="email"
+      placeholder="Электронная почта"
+      autocomplete="email"
+    >
+
+    <input
+      id="password"
+      type="password"
+      placeholder="Пароль"
+      autocomplete="current-password"
+    >
+
+    <button id="loginButton">Войти</button>
+    <button id="registerButton">Создать аккаунт</button>
+
+    <p id="message">Сначала создайте аккаунт.</p>
+    <p class="small">Арбузный архив · Версия 1.0</p>
+  </main>
+
+  <script>
+    document.getElementById("loginButton").addEventListener("click", () => {
+      document.getElementById("message").textContent =
+        "Подключение входа настроим на следующем шаге 🍉";
+    });
+
+    document.getElementById("registerButton").addEventListener("click", () => {
+      document.getElementById("message").textContent =
+        "Подключение регистрации настроим на следующем шаге 🍉";
+    });
+  </script>
+</body>
+</html>
