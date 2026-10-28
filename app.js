@@ -117,10 +117,7 @@ loginButton.addEventListener("click", async () => {
   await supabaseClient.auth.signInWithPassword(credentials)
     if (error) {
       showMessage("Ошибка входа: " + error.message);
-   } else if (data.user) {
-  alert("Вход успешен! Проверяем кабинет.");
-  alert("auth: " + document.getElementById("auth"));
-  alert("cabinet: " + document.getElementById("cabinet"));
+  } else if (data.user) {
   showCabinet(data.user);
 }
     }
