@@ -1,3 +1,5 @@
+"use strict";
+
 const emailInput = document.getElementById("email");
 const passwordInput = document.getElementById("password");
 const message = document.getElementById("message");
@@ -33,8 +35,8 @@ function initializeSupabase() {
     );
     return true;
   } catch (error) {
-    console.error("Ошибка подключения Supabase:", error);
-    showMessage("Не удалось подключить Supabase. Проверь настройки.");
+    console.error("Ошибка подключения:", error);
+    showMessage("Не удалось подключить Supabase.");
     return false;
   }
 }
@@ -56,7 +58,6 @@ function getCredentials() {
   return { email, password };
 }
 
-// Регистрация
 registerButton.addEventListener("click", async () => {
   if (!initializeSupabase()) return;
 
@@ -79,24 +80,19 @@ registerButton.addEventListener("click", async () => {
     }
 
     if (data.session) {
-      showMessage("Аккаунт создан! Ты вошёл в систему 🍉");
+      showMessage("Аккаунт создан! Ты вошёл в систему.");
     } else {
-      showMessage(
-        "Аккаунт создан! Проверь почту, чтобы подтвердить регистрацию."
-      );
+      showMessage("Аккаунт создан! Проверь почту для подтверждения.");
     }
   } catch (error) {
-    console.error("Ошибка регистрации:", error);
-    showMessage(
-      "Не удалось связаться с Supabase. Проверь интернет и настройки."
-    );
+    console.error(error);
+    showMessage("Не удалось связаться с Supabase. Проверь настройки и интернет.");
   } finally {
     registerButton.disabled = false;
     loginButton.disabled = false;
   }
 });
 
-// Вход
 loginButton.addEventListener("click", async () => {
   if (!initializeSupabase()) return;
 
@@ -108,11 +104,10 @@ loginButton.addEventListener("click", async () => {
   showMessage("Выполняем вход...");
 
   try {
-    const { data, error } =
-      await supabaseClient.auth.signInWithPassword({
-        email: credentials.email,
-        password: credentials.password
-      });
+    const { data, error } = await supabaseClient.auth.signInWithPassword({
+      email: credentials.email,
+      password: credentials.password
+    });
 
     if (error) {
       showMessage("Ошибка входа: " + error.message);
@@ -120,20 +115,17 @@ loginButton.addEventListener("click", async () => {
     }
 
     if (data.user) {
-      showMessage("Вход выполнен успешно! 🍉");
+      showMessage("Вход выполнен успешно!");
     }
   } catch (error) {
-    console.error("Ошибка входа:", error);
-    showMessage(
-      "Не удалось связаться с Supabase. Проверь интернет и настройки."
-    );
+    console.error(error);
+    showMessage("Не удалось связаться с Supabase. Проверь настройки и интернет.");
   } finally {
     loginButton.disabled = false;
     registerButton.disabled = false;
   }
 });
 
-// Проверяем подключение при открытии сайта
 if (initializeSupabase()) {
-  showMessage("Арбузный архив готов. Войди или создай аккаунт 🍉");
+  showMessage("Арбузный архив готов. Войди или создай аккаунт.");
 }
