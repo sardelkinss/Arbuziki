@@ -13,10 +13,64 @@ function showMessage(text) {
 }
 
 function initializeSupabase() {
+  if (supabaseClient) return true;
+
   if (!window.supabase || !window.supabase.createClient) {
     showMessage("Не загрузилась библиотека Supabase. Обнови страницу.");
     return false;
   }
+
+  if (
+    typeof SUPABASE_URL === "undefined" ||
+    typeof SUPABASE_KEY === "undefined" ||
+    !SUPABASE_URL ||
+    !SUPABASE_KEY
+  ) {
+    showMessage("Проверь настройки в файле config.js.");
+    return false;
+  }
+
+  try {
+    supabaseClient = window.supabase.createClient(
+      SUPABASE_URL,
+      SUPABASE_KEY
+    );
+    return true;
+  } catch (error) {
+    console.error("Ошибка подключения:", error);
+    showMessage("Не удалось подключить Supabase.");
+    return false;
+  }
+}function initializeSupabase() {
+  if (supabaseClient) return true;
+
+  if (!window.supabase || !window.supabase.createClient) {
+    showMessage("Не загрузилась библиотека Supabase. Обнови страницу.");
+    return false;
+  }
+
+  if (
+    typeof SUPABASE_URL === "undefined" ||
+    typeof SUPABASE_KEY === "undefined" ||
+    !SUPABASE_URL ||
+    !SUPABASE_KEY
+  ) {
+    showMessage("Проверь настройки в файле config.js.");
+    return false;
+  }
+
+  try {
+    supabaseClient = window.supabase.createClient(
+      SUPABASE_URL,
+      SUPABASE_KEY
+    );
+    return true;
+  } catch (error) {
+    console.error("Ошибка подключения:", error);
+    showMessage("Не удалось подключить Supabase.");
+    return false;
+  }
+}
 
   if (
     typeof SUPABASE_URL === "undefined" ||
