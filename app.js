@@ -185,3 +185,49 @@ async function startApp() {
 }
 
 startApp();
+// Переключение разделов Арбузного архива
+const archivePages = {
+  home: document.getElementById("archiveHome"),
+  notes: document.getElementById("archiveNotes"),
+  history: document.getElementById("archiveHistory"),
+  profile: document.getElementById("archiveProfile"),
+  settings: document.getElementById("archiveSettings")
+};
+
+document.querySelectorAll(".nav-btn").forEach((button) => {
+  button.addEventListener("click", () => {
+    const pageName = button.dataset.page;
+
+    Object.entries(archivePages).forEach(([name, page]) => {
+      if (page) page.classList.toggle("hidden", name !== pageName);
+    });
+
+    document.querySelectorAll(".nav-btn").forEach((item) => {
+      item.classList.toggle("active", item === button);
+    });
+  });
+});
+
+// Показываем почту в профиле
+const profileEmail = document.getElementById("profileEmail");
+
+if (profileEmail) {
+  const currentEmail = document.getElementById("userEmail");
+
+  if (currentEmail) {
+    profileEmail.textContent = currentEmail.textContent;
+  }
+}
+
+// Кнопка создания заметки открывает раздел заметок
+const newNoteButton = document.getElementById("newNoteButton");
+
+if (newNoteButton) {
+  newNoteButton.addEventListener("click", () => {
+    const notesButton = document.querySelector('[data-page="notes"]');
+    if (notesButton) notesButton.click();
+
+    const titleInput = document.getElementById("noteTitle");
+    if (titleInput) titleInput.focus();
+  });
+}
