@@ -1,19 +1,45 @@
 "use strict";
 
+/* =========================================================
+   АРБУЗНЫЙ АРХИВ
+   Авторизация, заметки, таблицы Excel, импорт и экспорт
+   ========================================================= */
+
 const $ = (id) => document.getElementById(id);
+
+const on = (id, event, callback) => {
+  const element = $(id);
+  if (element) element.addEventListener(event, callback);
+};
+
+const setText = (id, value) => {
+  const element = $(id);
+  if (element) element.textContent = value ?? "";
+};
+
+const setHidden = (id, hidden) => {
+  const element = $(id);
+  if (element) element.classList.toggle("hidden", hidden);
+};
+
+const authMessage = () => $("authMessage") || $("message");
+const appMessage = () => $("appMessage") || $("message");
 
 let supabaseClient = null;
 let currentUser = null;
+
 let notes = [];
 let sheets = [];
+
 let editingNoteId = null;
 let authMode = "login";
+
 let currentSheet = null;
 let sheetDirty = false;
 let sheetRows = 15;
 let sheetCols = 8;
 
-const pageNames = {
+const PAGE_NAMES = {
   home: "Главная",
   notes: "Заметки",
   sheets: "Excel-таблицы",
@@ -22,17 +48,26 @@ const pageNames = {
   settings: "Настройки"
 };
 
+/* -------------------- Сообщения -------------------- */
+
 function showMessage(element, text, isError = false) {
   if (!element) return;
+
   element.textContent = text || "";
   element.classList.toggle("error", Boolean(isError));
 }
 
+/* -------------------- Supabase -------------------- */
+
 function initSupabase() {
   if (supabaseClient) return true;
 
-  if (!window.supabase || !window.supabase.createClient) {
-    showMessage($("authMessage"), "Не загрузилась библиотека Supabase. Проверь интернет.", true);
+  if (!window.supabase?.createClient) {
+    showMessage(
+      authMessage(),
+      "Не загрузилась библиотека Supabase. Проверь подключение к интернету.",
+      true
+    );
     return false;
   }
 
@@ -42,7 +77,11 @@ function initSupabase() {
     !SUPABASE_URL ||
     !SUPABASE_KEY
   ) {
-    showMessage($("authMessage"), "Проверь настройки Supabase в config.js.", true);
+    showMessage(
+      authMessage(),
+      "Проверь настройки Supabase в config.js.",
+      true
+    );
     return false;
   }
 
@@ -54,42 +93,58 @@ function initSupabase() {
   return true;
 }
 
-// -------------------- Авторизация --------------------
+/* -------------------- Авторизация -------------------- */
 
 function setAuthMode(mode) {
   authMode = mode;
 
-  $("showLoginTab").classList.toggle("active", mode === "login");
-  $("showRegisterTab").classList.toggle("active", mode === "register");
+  if ($("showLoginTab")) {
+    $("showLoginTab").classList.toggle("active", mode === "login");
+  }
 
-  $("authSubmit").textContent =
-    mode === "login" ? "Войти в архив" : "Создать аккаунт";
+  if ($("showRegisterTab")) {
+    $("showRegisterTab").classList.toggle("active", mode === "register");
+  }
 
-  $("password").autocomplete =
-    mode === "login" ? "current-password" : "new-password";
+  setText(
+    "authSubmit",
+    mode === "login" ? "Войти в архив" : "Создать аккаунт"
+  );
+
+  const password = $("password");
+
+  if (password) {
+    password.autocomplete =
+      mode === "login" ? "current-password" : "new-password";
+  }
 
   showMessage(
-    $("authMessage"),
+    authMessage(),
     mode === "login"
       ? "Войди в свой архив."
-      : "После регистрации может понадобиться подтверждение почты."
+      : "После регистрации может потребоваться подтверждение почты."
   );
 }
 
 function showApp(user) {
   currentUser = user;
 
-  $("authView").classList.add("hidden");
-  $("appView").classList.remove("hidden");
+  setHidden("authView", true);
+  setHidden("auth", true);
+  setHidden("appView", false);
+  setHidden("cabinet", false);
 
-  const email = user.email || "Пользователь";
+  const email = user?.email || "Пользователь";
 
-  $("profileEmail").textContent = email;
-  $("settingsEmail").textContent = email;
-  $("sidebarEmail").textContent = email;
-  $("avatarInitials").textContent = email.slice(0, 1).toUpperCase();
+  setText("profileEmail", email);
+  setText("settingsEmail", email);
+  setText("sidebarEmail", email);
+  setText("userEmail", `Ты вошёл как: ${email}`);
+  setText("avatarInitials", email.charAt(0).toUpperCase());
 
   setPage("home");
+
+  // Функции сами проверят, авторизован ли пользователь.
   loadNotes();
   loadSheets();
 }
@@ -101,37 +156,44 @@ function showAuth() {
   currentSheet = null;
   sheetDirty = false;
 
-  $("authView").classList.remove("hidden");
-  $("appView").classList.add("hidden");
+  setHidden("authView", false);
+  setHidden("auth", false);
+  setHidden("appView", true);
+  setHidden("cabinet", true);
 
   resetNoteEditor();
   renderNotes();
   renderSheets();
 }
 
-$("authForm").addEventListener("submit", async (event) => {
-  event.preventDefault();
-
+async function authenticate() {
   if (!initSupabase()) return;
 
-  const email = $("email").value.trim();
-  const password = $("password").value;
+  const email = $("email")?.value.trim() || "";
+  const password = $("password")?.value || "";
 
   if (!email || password.length < 6) {
     showMessage(
-      $("authMessage"),
+      authMessage(),
       "Введи почту и пароль минимум из 6 символов.",
       true
     );
     return;
   }
 
-  const button = $("authSubmit");
-  button.disabled = true;
+  const submit = $("authSubmit");
+  const login = $("loginButton");
+  const register = $("registerButton");
+
+  if (submit) submit.disabled = true;
+  if (login) login.disabled = true;
+  if (register) register.disabled = true;
 
   showMessage(
-    $("authMessage"),
-    authMode === "login" ? "Выполняем вход..." : "Создаём аккаунт..."
+    authMessage(),
+    authMode === "login"
+      ? "Выполняем вход..."
+      : "Создаём аккаунт..."
   );
 
   try {
@@ -147,7 +209,7 @@ $("authForm").addEventListener("submit", async (event) => {
       if (data.user) {
         showApp(data.user);
       } else {
-        showMessage($("authMessage"), "Не удалось получить данные пользователя.", true);
+        showMessage(authMessage(), "Не удалось получить данные аккаунта.", true);
       }
     } else {
       const { data, error } = await supabaseClient.auth.signUp({
@@ -161,90 +223,99 @@ $("authForm").addEventListener("submit", async (event) => {
         showApp(data.user);
       } else {
         setAuthMode("login");
+
         showMessage(
-          $("authMessage"),
+          authMessage(),
           "Аккаунт создан. Проверь почту, подтверди регистрацию и затем войди."
         );
       }
     }
   } catch (error) {
     console.error("Ошибка авторизации:", error);
+
     showMessage(
-      $("authMessage"),
+      authMessage(),
       `Не удалось выполнить действие: ${error.message}`,
       true
     );
   } finally {
-    button.disabled = false;
+    if (submit) submit.disabled = false;
+    if (login) login.disabled = false;
+    if (register) register.disabled = false;
   }
-});
+}
 
-$("showLoginTab").addEventListener("click", () => setAuthMode("login"));
-$("showRegisterTab").addEventListener("click", () => setAuthMode("register"));
-
-$("logoutButton").addEventListener("click", async () => {
+async function logout() {
   if (!initSupabase()) return;
 
   if (
     sheetDirty &&
-    !window.confirm("В таблице есть несохранённые изменения. Выйти без сохранения?")
+    !window.confirm(
+      "В таблице есть несохранённые изменения. Выйти без сохранения?"
+    )
   ) {
     return;
   }
 
-  $("logoutButton").disabled = true;
+  const button = $("logoutButton");
+
+  if (button) button.disabled = true;
 
   try {
     const { error } = await supabaseClient.auth.signOut();
+
     if (error) throw error;
 
     showAuth();
-    showMessage($("authMessage"), "Ты вышел из аккаунта.");
-  } catch (error) {
-    showMessage($("appMessage"), `Не удалось выйти: ${error.message}`, true);
-  } finally {
-    $("logoutButton").disabled = false;
-  }
-});
 
-async function startApp() {
-  if (!initSupabase()) return;
-
-  showMessage($("authMessage"), "Проверяем вход...");
-
-  try {
-    const { data, error } = await supabaseClient.auth.getSession();
-    if (error) throw error;
-
-    if (data.session && data.session.user) {
-      showApp(data.session.user);
-    } else {
-      showAuth();
-    }
-  } catch (error) {
-    console.error("Ошибка запуска:", error);
-    showAuth();
     showMessage(
-      $("authMessage"),
-      `Не удалось проверить сессию: ${error.message}`,
+      authMessage(),
+      "Ты вышел из аккаунта."
+    );
+  } catch (error) {
+    showMessage(
+      appMessage(),
+      `Не удалось выйти: ${error.message}`,
       true
     );
+  } finally {
+    if (button) button.disabled = false;
   }
 }
 
-// -------------------- Общие функции --------------------
+/* -------------------- Навигация -------------------- */
 
 function setPage(pageName) {
+  const pageIds = {
+    home: ["page-home", "archiveHome"],
+    notes: ["page-notes", "archiveNotes"],
+    sheets: ["page-sheets"],
+    history: ["page-history", "archiveHistory"],
+    profile: ["page-profile", "archiveProfile"],
+    settings: ["page-settings", "archiveSettings"]
+  };
+
   document.querySelectorAll(".page").forEach((page) => {
-    page.classList.toggle("active", page.id === `page-${pageName}`);
+    page.classList.remove("active");
+    page.classList.add("hidden");
   });
+
+  for (const id of pageIds[pageName] || []) {
+    const page = $(id);
+    if (page) {
+      page.classList.remove("hidden");
+      page.classList.add("active");
+    }
+  }
 
   document.querySelectorAll(".nav-btn").forEach((button) => {
     button.classList.toggle("active", button.dataset.page === pageName);
   });
 
-  $("breadcrumbCurrent").textContent = pageNames[pageName] || pageName;
+  setText("breadcrumbCurrent", PAGE_NAMES[pageName] || pageName);
 }
+
+/* -------------------- Безопасность и форматирование -------------------- */
 
 function escapeHTML(value) {
   return String(value ?? "").replace(/[&<>"']/g, (character) => ({
@@ -260,7 +331,10 @@ function formatDate(value) {
   if (!value) return "Дата неизвестна";
 
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "Дата неизвестна";
+
+  if (Number.isNaN(date.getTime())) {
+    return "Дата неизвестна";
+  }
 
   return new Intl.DateTimeFormat("ru-RU", {
     dateStyle: "medium",
@@ -279,23 +353,7 @@ function pluralNotes(number) {
   return "заметок";
 }
 
-function updateRecentCount() {
-  const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
-
-  const recentNotes = notes.filter((note) => {
-    const time = new Date(note.updated_at || note.created_at).getTime();
-    return Number.isFinite(time) && time >= weekAgo;
-  }).length;
-
-  const recentSheets = sheets.filter((sheet) => {
-    const time = new Date(sheet.updated_at || sheet.created_at).getTime();
-    return Number.isFinite(time) && time >= weekAgo;
-  }).length;
-
-  $("homeRecentCount").textContent = recentNotes + recentSheets;
-}
-
-function renderList(container, items, emptyText, renderCard) {
+function renderList(container, items, emptyText, renderItem) {
   if (!container) return;
 
   if (!items.length) {
@@ -308,28 +366,29 @@ function renderList(container, items, emptyText, renderCard) {
     return;
   }
 
-  container.innerHTML = items.map(renderCard).join("");
+  container.innerHTML = items.map(renderItem).join("");
 }
 
-// -------------------- Заметки --------------------
+/* =========================================================
+   ЗАМЕТКИ
+   ========================================================= */
 
 function resetNoteEditor() {
   editingNoteId = null;
 
-  if ($("noteForm")) $("noteForm").reset();
-
-  if ($("editorHeading")) {
-    $("editorHeading").textContent = "Новая заметка";
+  if ($("noteForm")) {
+    $("noteForm").reset();
   }
 
-  if ($("saveButton")) {
-    $("saveButton").textContent = "Сохранить заметку";
-    $("saveButton").disabled = false;
-  }
+  // Старый вариант HTML использует textarea с id="note".
+  if ($("note")) $("note").value = "";
 
-  if ($("cancelEdit")) {
-    $("cancelEdit").classList.add("hidden");
-  }
+  setText("editorHeading", "Новая заметка");
+  setText("saveButton", "Сохранить заметку");
+
+  setHidden("cancelEdit", true);
+
+  if ($("saveButton")) $("saveButton").disabled = false;
 }
 
 function noteCard(note) {
@@ -339,19 +398,27 @@ function noteCard(note) {
     <article class="note-card">
       <div class="card-top">
         <div class="card-symbol">▤</div>
-        <div class="card-menu">
-          <button class="btn ghost small" type="button" data-edit-note="${id}">
-            Изменить
-          </button>
-        </div>
+        <button class="btn ghost small"
+                type="button"
+                data-edit-note="${id}">
+          Изменить
+        </button>
       </div>
 
       <h4>${escapeHTML(note.title || "Без названия")}</h4>
-      <p class="note-content">${escapeHTML(note.encrypted_content || "")}</p>
+
+      <p class="note-content">${
+        escapeHTML(note.encrypted_content || "")
+      }</p>
 
       <div class="card-meta">
-        <span>${escapeHTML(formatDate(note.updated_at || note.created_at))}</span>
-        <button class="btn danger small" type="button" data-delete-note="${id}">
+        <span>${
+          escapeHTML(formatDate(note.updated_at || note.created_at))
+        }</span>
+
+        <button class="btn danger small"
+                type="button"
+                data-delete-note="${id}">
           Удалить
         </button>
       </div>
@@ -360,8 +427,9 @@ function noteCard(note) {
 }
 
 function renderNotes() {
-  const query = $("notesSearch")
-    ? $("notesSearch").value.trim().toLocaleLowerCase("ru")
+  const search = $("notesSearch");
+  const query = search
+    ? search.value.trim().toLocaleLowerCase("ru")
     : "";
 
   const filtered = notes.filter((note) => {
@@ -372,7 +440,7 @@ function renderNotes() {
   renderList(
     $("notesList"),
     filtered,
-    query ? "Ничего не найдено. Попробуй другой запрос." : "Здесь пока пусто. Создай первую заметку.",
+    query ? "Ничего не найдено." : "Здесь пока пусто. Создай первую заметку.",
     noteCard
   );
 
@@ -390,9 +458,10 @@ function renderNotes() {
     noteCard
   );
 
-  $("homeNoteCount").textContent = notes.length;
-  $("notesTotal").textContent = `${notes.length} ${pluralNotes(notes.length)}`;
-  $("profileNoteCount").textContent = notes.length;
+  setText("homeNoteCount", notes.length);
+  setText("notesCount", notes.length);
+  setText("notesTotal", `${notes.length} ${pluralNotes(notes.length)}`);
+  setText("profileNoteCount", notes.length);
 
   updateRecentCount();
 }
@@ -400,7 +469,7 @@ function renderNotes() {
 async function loadNotes() {
   if (!supabaseClient || !currentUser) return;
 
-  showMessage($("appMessage"), "Загружаем заметки...");
+  showMessage(appMessage(), "Загружаем заметки...");
 
   try {
     const { data, error } = await supabaseClient
@@ -414,11 +483,12 @@ async function loadNotes() {
     notes = data || [];
     renderNotes();
 
-    showMessage($("appMessage"), `Заметки загружены: ${notes.length}.`);
+    showMessage(appMessage(), `Заметки загружены: ${notes.length}.`);
   } catch (error) {
     console.error("Ошибка загрузки заметок:", error);
+
     showMessage(
-      $("appMessage"),
+      appMessage(),
       `Не удалось загрузить заметки: ${error.message}`,
       true
     );
@@ -426,18 +496,25 @@ async function loadNotes() {
 }
 
 async function saveNote(event) {
-  event.preventDefault();
+  if (event) event.preventDefault();
 
   if (!supabaseClient || !currentUser) {
-    showMessage($("appMessage"), "Сначала войди в аккаунт.", true);
+    showMessage(appMessage(), "Сначала войди в аккаунт.", true);
     return;
   }
 
-  const title = $("noteTitle").value.trim();
-  const content = $("noteContent").value.trim();
+  const title = $("noteTitle")?.value.trim() || "";
+  const content =
+    $("noteContent")?.value.trim() ||
+    $("note")?.value.trim() ||
+    "";
 
   if (!title || !content) {
-    showMessage($("appMessage"), "Заполни название и текст заметки.", true);
+    showMessage(
+      appMessage(),
+      "Заполни название и текст заметки.",
+      true
+    );
     return;
   }
 
@@ -449,8 +526,13 @@ async function saveNote(event) {
     updated_at: new Date().toISOString()
   };
 
-  $("saveButton").disabled = true;
-  showMessage($("appMessage"), wasEditing ? "Обновляем заметку..." : "Сохраняем заметку...");
+  const button = $("saveButton");
+  if (button) button.disabled = true;
+
+  showMessage(
+    appMessage(),
+    wasEditing ? "Обновляем заметку..." : "Сохраняем заметку..."
+  );
 
   try {
     let result;
@@ -466,7 +548,10 @@ async function saveNote(event) {
     } else {
       result = await supabaseClient
         .from("notes")
-        .insert({ ...payload, user_id: currentUser.id })
+        .insert({
+          ...payload,
+          user_id: currentUser.id
+        })
         .select()
         .single();
     }
@@ -474,23 +559,24 @@ async function saveNote(event) {
     if (result.error) throw result.error;
 
     resetNoteEditor();
+
     await loadNotes();
     setPage("notes");
 
     showMessage(
-      $("appMessage"),
+      appMessage(),
       wasEditing ? "Заметка обновлена." : "Заметка сохранена."
     );
   } catch (error) {
     console.error("Ошибка сохранения заметки:", error);
 
     showMessage(
-      $("appMessage"),
+      appMessage(),
       `Не удалось сохранить заметку: ${error.message}`,
       true
     );
   } finally {
-    $("saveButton").disabled = false;
+    if (button) button.disabled = false;
   }
 }
 
@@ -499,21 +585,31 @@ function editNote(id) {
   if (!note) return;
 
   editingNoteId = id;
-  $("noteTitle").value = note.title || "";
-  $("noteContent").value = note.encrypted_content || "";
 
-  $("editorHeading").textContent = "Редактирование заметки";
-  $("saveButton").textContent = "Сохранить изменения";
-  $("cancelEdit").classList.remove("hidden");
+  if ($("noteTitle")) $("noteTitle").value = note.title || "";
+
+  const contentField = $("noteContent") || $("note");
+
+  if (contentField) {
+    contentField.value = note.encrypted_content || "";
+  }
+
+  setText("editorHeading", "Редактирование заметки");
+  setText("saveButton", "Сохранить изменения");
+  setHidden("cancelEdit", false);
 
   setPage("notes");
-  $("noteTitle").focus();
+
+  if ($("noteTitle")) $("noteTitle").focus();
 }
 
 async function deleteNote(id) {
   const note = notes.find((item) => item.id === id);
 
-  if (!note || !window.confirm(`Удалить заметку «${note.title || "Без названия"}»?`)) {
+  if (
+    !note ||
+    !window.confirm(`Удалить заметку «${note.title || "Без названия"}»?`)
+  ) {
     return;
   }
 
@@ -529,17 +625,20 @@ async function deleteNote(id) {
     if (editingNoteId === id) resetNoteEditor();
 
     await loadNotes();
-    showMessage($("appMessage"), "Заметка удалена.");
+
+    showMessage(appMessage(), "Заметка удалена.");
   } catch (error) {
     showMessage(
-      $("appMessage"),
+      appMessage(),
       `Не удалось удалить заметку: ${error.message}`,
       true
     );
   }
 }
 
-// -------------------- Excel-таблицы --------------------
+/* =========================================================
+   EXCEL-ТАБЛИЦЫ
+   ========================================================= */
 
 function columnLabel(index) {
   let number = index + 1;
@@ -555,43 +654,57 @@ function columnLabel(index) {
 }
 
 function makeEmptyGrid(rows = 15, cols = 8) {
-  return Array.from({ length: rows }, () => Array(cols).fill(""));
+  return Array.from(
+    { length: rows },
+    () => Array(cols).fill("")
+  );
 }
 
 function normalizeGrid(input) {
-  const data = Array.isArray(input)
-    ? input.map((row) =>
-        Array.isArray(row)
-          ? row.map((cell) => cell == null ? "" : String(cell))
-          : []
-      )
-    : [];
+  if (!Array.isArray(input)) {
+    return makeEmptyGrid();
+  }
 
-  const cols = Math.max(8, ...data.map((row) => row.length));
+  const data = input.map((row) =>
+    Array.isArray(row)
+      ? row.map((cell) => cell == null ? "" : String(cell))
+      : []
+  );
+
   const rows = Math.max(15, data.length);
+  const cols = Math.max(8, ...data.map((row) => row.length));
 
   if (rows > 300) {
-    throw new Error("Максимальный размер листа в этой версии — 300 строк.");
+    throw new Error("Максимальный размер — 300 строк.");
   }
 
   if (cols > 40) {
-    throw new Error("Максимальный размер листа в этой версии — 40 столбцов.");
+    throw new Error("Максимальный размер — 40 столбцов.");
   }
 
   return Array.from({ length: rows }, (_, r) => {
     const row = data[r] || [];
-    return Array.from({ length: cols }, (_, c) => row[c] ?? "");
+
+    return Array.from(
+      { length: cols },
+      (_, c) => row[c] ?? ""
+    );
   });
 }
 
 function sheetCard(sheet) {
   const id = escapeHTML(sheet.id);
-  const data = Array.isArray(sheet.sheet_data) ? sheet.sheet_data : [];
+  const data = Array.isArray(sheet.sheet_data)
+    ? sheet.sheet_data
+    : [];
+
   const preview = [];
 
   for (let r = 0; r < 3; r++) {
     for (let c = 0; c < 4; c++) {
-      preview.push(`<span>${escapeHTML((data[r] && data[r][c]) || "")}</span>`);
+      preview.push(
+        `<span>${escapeHTML((data[r] && data[r][c]) || "")}</span>`
+      );
     }
   }
 
@@ -599,13 +712,19 @@ function sheetCard(sheet) {
     <article class="sheet-card">
       <div class="card-top">
         <div class="card-symbol">▦</div>
-        <button class="btn danger small" type="button" data-delete-sheet="${id}">
+
+        <button class="btn danger small"
+                type="button"
+                data-delete-sheet="${id}">
           Удалить
         </button>
       </div>
 
       <h4>${escapeHTML(sheet.name || "Без названия")}</h4>
-      <p class="note-content">Таблица · ${escapeHTML(formatDate(sheet.updated_at || sheet.created_at))}</p>
+
+      <p class="note-content">
+        Таблица · ${escapeHTML(formatDate(sheet.updated_at || sheet.created_at))}
+      </p>
 
       <div class="sheet-preview">
         <div class="mini-grid">${preview.join("")}</div>
@@ -613,7 +732,10 @@ function sheetCard(sheet) {
 
       <div class="card-meta">
         <span>Excel-таблица</span>
-        <button class="btn secondary small" type="button" data-open-sheet="${id}">
+
+        <button class="btn secondary small"
+                type="button"
+                data-open-sheet="${id}">
           Открыть →
         </button>
       </div>
@@ -622,8 +744,9 @@ function sheetCard(sheet) {
 }
 
 function renderSheets() {
-  const query = $("sheetsSearch")
-    ? $("sheetsSearch").value.trim().toLocaleLowerCase("ru")
+  const search = $("sheetsSearch");
+  const query = search
+    ? search.value.trim().toLocaleLowerCase("ru")
     : "";
 
   const filtered = sheets.filter((sheet) =>
@@ -633,7 +756,7 @@ function renderSheets() {
   renderList(
     $("sheetsList"),
     filtered,
-    query ? "Таблицы не найдены." : "Здесь пока нет таблиц. Создай первую Excel-таблицу.",
+    query ? "Таблицы не найдены." : "Создай свою первую Excel-таблицу.",
     sheetCard
   );
 
@@ -644,8 +767,8 @@ function renderSheets() {
     sheetCard
   );
 
-  $("homeSheetCount").textContent = sheets.length;
-  $("profileSheetCount").textContent = sheets.length;
+  setText("homeSheetCount", sheets.length);
+  setText("profileSheetCount", sheets.length);
 
   updateRecentCount();
 }
@@ -666,11 +789,12 @@ async function loadSheets() {
     renderSheets();
   } catch (error) {
     console.error("Ошибка загрузки таблиц:", error);
+
     renderSheets();
 
     showMessage(
-      $("appMessage"),
-      `Не удалось загрузить таблицы. Проверь, что выполнен supabase_tables.sql. Подробности: ${error.message}`,
+      appMessage(),
+      `Не удалось загрузить таблицы. Проверь SQL для Supabase. ${error.message}`,
       true
     );
   }
@@ -698,26 +822,24 @@ async function createSheet() {
 
     showMessage(
       $("sheetMessage"),
-      "Таблица создана. Добавь данные и нажми «Сохранить»."
+      "Таблица создана. Введи данные и нажми «Сохранить»."
     );
   } catch (error) {
-    console.error("Ошибка создания таблицы:", error);
-
     showMessage(
-      $("appMessage"),
-      `Не удалось создать таблицу: ${error.message}. Проверь SQL-файл для Supabase.`,
+      appMessage(),
+      `Не удалось создать таблицу: ${error.message}. Проверь создание таблицы sheets в Supabase.`,
       true
     );
   }
 }
 
 function openSheet(sheet) {
-  if (
-    currentSheet &&
-    sheetDirty &&
-    !window.confirm("В таблице есть несохранённые изменения. Открыть другую таблицу?")
-  ) {
-    return;
+  if (currentSheet && sheetDirty) {
+    const confirmed = window.confirm(
+      "Есть несохранённые изменения. Открыть другую таблицу без сохранения?"
+    );
+
+    if (!confirmed) return;
   }
 
   currentSheet = {
@@ -730,11 +852,16 @@ function openSheet(sheet) {
   sheetCols = currentSheet.sheet_data[0].length;
   sheetDirty = false;
 
-  $("sheetListView").classList.add("hidden");
-  $("sheetEditorView").classList.remove("hidden");
-  $("sheetPageHeading").textContent = currentSheet.name;
-  $("sheetNameInput").value = currentSheet.name;
-  $("sheetStatus").textContent = "Сохранено";
+  setHidden("sheetListView", true);
+  setHidden("sheetEditorView", false);
+
+  setText("sheetPageHeading", currentSheet.name);
+
+  if ($("sheetNameInput")) {
+    $("sheetNameInput").value = currentSheet.name;
+  }
+
+  setText("sheetStatus", "Сохранено");
 
   setPage("sheets");
   renderGrid();
@@ -743,7 +870,7 @@ function openSheet(sheet) {
 function closeSheetEditor() {
   if (
     sheetDirty &&
-    !window.confirm("Есть несохранённые изменения. Закрыть таблицу без сохранения?")
+    !window.confirm("Есть несохранённые изменения. Закрыть без сохранения?")
   ) {
     return;
   }
@@ -751,21 +878,20 @@ function closeSheetEditor() {
   currentSheet = null;
   sheetDirty = false;
 
-  $("sheetEditorView").classList.add("hidden");
-  $("sheetListView").classList.remove("hidden");
+  setHidden("sheetEditorView", true);
+  setHidden("sheetListView", false);
 
   renderSheets();
 }
 
 function markSheetDirty() {
   sheetDirty = true;
-  $("sheetStatus").textContent = "Есть несохранённые изменения";
+  setText("sheetStatus", "Есть несохранённые изменения");
 }
 
 function renderGrid() {
-  if (!currentSheet) return;
+  if (!currentSheet || !$("spreadsheetGrid")) return;
 
-  const grid = $("spreadsheetGrid");
   let html = "<thead><tr><th class='row-head'>#</th>";
 
   for (let c = 0; c < sheetCols; c++) {
@@ -782,13 +908,11 @@ function renderGrid() {
 
       html += `
         <td>
-          <input
-            type="text"
-            data-cell-row="${r}"
-            data-cell-col="${c}"
-            value="${value}"
-            aria-label="${columnLabel(c)}${r + 1}"
-          >
+          <input type="text"
+                 data-cell-row="${r}"
+                 data-cell-col="${c}"
+                 value="${value}"
+                 aria-label="${columnLabel(c)}${r + 1}">
         </td>
       `;
     }
@@ -797,22 +921,26 @@ function renderGrid() {
   }
 
   html += "</tbody>";
-  grid.innerHTML = html;
 
-  $("sheetDimensions").textContent = `${sheetRows} строк · ${sheetCols} столбцов`;
+  $("spreadsheetGrid").innerHTML = html;
+
+  setText(
+    "sheetDimensions",
+    `${sheetRows} строк · ${sheetCols} столбцов`
+  );
 }
 
 async function saveCurrentSheet() {
   if (!currentSheet || !currentUser || !supabaseClient) return;
 
-  const name = $("sheetNameInput").value.trim() || "Без названия";
+  const name = $("sheetNameInput")?.value.trim() || "Без названия";
 
   currentSheet.name = name;
-  currentSheet.sheet_data = currentSheet.sheet_data.slice(0, 300)
-    .map((row) => row.slice(0, 40));
 
-  $("saveSheetButton").disabled = true;
-  $("sheetStatus").textContent = "Сохраняем...";
+  const button = $("saveSheetButton");
+  if (button) button.disabled = true;
+
+  setText("sheetStatus", "Сохраняем...");
   showMessage($("sheetMessage"), "Сохраняем таблицу...");
 
   try {
@@ -839,11 +967,16 @@ async function saveCurrentSheet() {
     sheetCols = currentSheet.sheet_data[0].length;
     sheetDirty = false;
 
-    $("sheetNameInput").value = currentSheet.name;
-    $("sheetPageHeading").textContent = currentSheet.name;
-    $("sheetStatus").textContent = "Сохранено";
+    if ($("sheetNameInput")) {
+      $("sheetNameInput").value = currentSheet.name;
+    }
 
-    const index = sheets.findIndex((item) => item.id === currentSheet.id);
+    setText("sheetPageHeading", currentSheet.name);
+    setText("sheetStatus", "Сохранено");
+
+    const index = sheets.findIndex(
+      (item) => item.id === currentSheet.id
+    );
 
     if (index >= 0) {
       sheets[index] = data;
@@ -858,11 +991,15 @@ async function saveCurrentSheet() {
     );
 
     renderSheets();
-    showMessage($("sheetMessage"), "Таблица сохранена в твоём аккаунте.");
+
+    showMessage(
+      $("sheetMessage"),
+      "Таблица сохранена в твоём аккаунте."
+    );
   } catch (error) {
     console.error("Ошибка сохранения таблицы:", error);
 
-    $("sheetStatus").textContent = "Ошибка сохранения";
+    setText("sheetStatus", "Ошибка сохранения");
 
     showMessage(
       $("sheetMessage"),
@@ -870,7 +1007,7 @@ async function saveCurrentSheet() {
       true
     );
   } finally {
-    $("saveSheetButton").disabled = false;
+    if (button) button.disabled = false;
   }
 }
 
@@ -878,7 +1015,7 @@ function addRow() {
   if (!currentSheet) return;
 
   if (sheetRows >= 300) {
-    showMessage($("sheetMessage"), "Достигнут лимит: 300 строк.", true);
+    showMessage($("sheetMessage"), "Лимит — 300 строк.", true);
     return;
   }
 
@@ -893,7 +1030,7 @@ function addColumn() {
   if (!currentSheet) return;
 
   if (sheetCols >= 40) {
-    showMessage($("sheetMessage"), "Достигнут лимит: 40 столбцов.", true);
+    showMessage($("sheetMessage"), "Лимит — 40 столбцов.", true);
     return;
   }
 
@@ -930,7 +1067,6 @@ function removeLastColumn() {
 
 async function deleteSheet(id) {
   const sheet = sheets.find((item) => item.id === id);
-
   if (!sheet) return;
 
   if (!window.confirm(`Удалить таблицу «${sheet.name || "Без названия"}»?`)) {
@@ -948,26 +1084,33 @@ async function deleteSheet(id) {
 
     sheets = sheets.filter((item) => item.id !== id);
 
-    if (currentSheet && currentSheet.id === id) {
+    if (currentSheet?.id === id) {
       currentSheet = null;
       sheetDirty = false;
 
-      $("sheetEditorView").classList.add("hidden");
-      $("sheetListView").classList.remove("hidden");
+      setHidden("sheetEditorView", true);
+      setHidden("sheetListView", false);
     }
 
     renderSheets();
-    showMessage($("appMessage"), "Таблица удалена.");
+
+    showMessage(appMessage(), "Таблица удалена.");
   } catch (error) {
     showMessage(
-      $("appMessage"),
+      appMessage(),
       `Не удалось удалить таблицу: ${error.message}`,
       true
     );
   }
 }
 
-// -------------------- Импорт и экспорт Excel/CSV --------------------
+/* -------------------- Excel: импорт и экспорт -------------------- */
+
+function safeFilename(name) {
+  return (name || "таблица")
+    .replace(/[\\/:*?"<>|]+/g, "_")
+    .slice(0, 80) || "таблица";
+}
 
 function getExportData() {
   if (!currentSheet) return [];
@@ -977,19 +1120,13 @@ function getExportData() {
   );
 }
 
-function safeFilename(name) {
-  return (name || "таблица")
-    .replace(/[\\/:*?"<>|]+/g, "_")
-    .slice(0, 80) || "таблица";
-}
-
 function exportXlsx() {
   if (!currentSheet) return;
 
   if (!window.XLSX) {
     showMessage(
       $("sheetMessage"),
-      "Библиотека Excel не загрузилась. Проверь интернет и обнови страницу.",
+      "Excel-библиотека не загрузилась. Проверь интернет.",
       true
     );
     return;
@@ -998,24 +1135,25 @@ function exportXlsx() {
   const workbook = window.XLSX.utils.book_new();
   const worksheet = window.XLSX.utils.aoa_to_sheet(getExportData());
 
-  window.XLSX.utils.book_append_sheet(workbook, worksheet, "Лист 1");
+  window.XLSX.utils.book_append_sheet(
+    workbook,
+    worksheet,
+    "Лист 1"
+  );
 
   window.XLSX.writeFile(
     workbook,
     `${safeFilename(currentSheet.name)}.xlsx`
   );
 
-  showMessage($("sheetMessage"), "Файл XLSX подготовлен для скачивания.");
+  showMessage($("sheetMessage"), "Файл XLSX скачан.");
 }
 
 function exportCsv() {
   if (!currentSheet) return;
 
   const csv = getExportData().map((row) =>
-    row.map((value) => {
-      const text = String(value ?? "");
-      return `"${text.replace(/"/g, '""')}"`;
-    }).join(",")
+    row.map((value) => `"${String(value ?? "").replace(/"/g, '""')}"`).join(",")
   ).join("\r\n");
 
   const blob = new Blob(["\uFEFF" + csv], {
@@ -1043,7 +1181,7 @@ async function importSpreadsheet(file) {
   if (!window.XLSX) {
     showMessage(
       $("sheetMessage"),
-      "Библиотека Excel не загрузилась. Проверь интернет и обнови страницу.",
+      "Excel-библиотека не загрузилась. Проверь интернет.",
       true
     );
     return;
@@ -1052,7 +1190,10 @@ async function importSpreadsheet(file) {
   try {
     const buffer = await file.arrayBuffer();
 
-    const workbook = window.XLSX.read(buffer, { type: "array" });
+    const workbook = window.XLSX.read(buffer, {
+      type: "array"
+    });
+
     const firstSheetName = workbook.SheetNames[0];
 
     if (!firstSheetName) {
@@ -1061,7 +1202,11 @@ async function importSpreadsheet(file) {
 
     const imported = window.XLSX.utils.sheet_to_json(
       workbook.Sheets[firstSheetName],
-      { header: 1, defval: "", raw: false }
+      {
+        header: 1,
+        defval: "",
+        raw: false
+      }
     );
 
     if (!imported.length) {
@@ -1069,6 +1214,7 @@ async function importSpreadsheet(file) {
     }
 
     currentSheet.sheet_data = normalizeGrid(imported);
+
     sheetRows = currentSheet.sheet_data.length;
     sheetCols = currentSheet.sheet_data[0].length;
 
@@ -1077,135 +1223,101 @@ async function importSpreadsheet(file) {
 
     showMessage(
       $("sheetMessage"),
-      "Файл загружен в редактор. Нажми «Сохранить», чтобы записать изменения в архив."
+      "Файл импортирован. Нажми «Сохранить», чтобы записать изменения."
     );
   } catch (error) {
     showMessage(
       $("sheetMessage"),
-      `Не удалось прочитать файл: ${error.message}`,
+      `Ошибка импорта: ${error.message}`,
       true
     );
   } finally {
-    $("importSheetInput").value = "";
+    if ($("importSheetInput")) {
+      $("importSheetInput").value = "";
+    }
   }
 }
 
-// -------------------- Кнопки и события --------------------
+/* -------------------- Подключение кнопок -------------------- */
 
-document.querySelectorAll(".nav-btn").forEach((button) => {
-  button.addEventListener("click", () => {
-    const destination = button.dataset.page;
+// Современная форма входа.
+on("authForm", "submit", authenticate);
 
-    if (
-      destination === "sheets" &&
-      currentSheet
-    ) {
-      $("sheetEditorView").classList.remove("hidden");
-      $("sheetListView").classList.add("hidden");
-    }
-
-    if (
-      destination !== "sheets" &&
-      currentSheet &&
-      sheetDirty &&
-      !window.confirm("В таблице есть несохранённые изменения. Перейти без сохранения?")
-    ) {
-      return;
-    }
-
-    setPage(destination);
-  });
+// Совместимость со старым HTML, где отдельные кнопки.
+on("loginButton", "click", () => {
+  setAuthMode("login");
+  authenticate();
 });
 
-document.querySelectorAll("[data-go]").forEach((button) => {
-  button.addEventListener("click", () => {
-    const destination = button.dataset.go;
-
-    if (
-      destination === "sheets" &&
-      currentSheet &&
-      sheetDirty &&
-      !window.confirm("В таблице есть несохранённые изменения. Перейти к списку таблиц?")
-    ) {
-      return;
-    }
-
-    if (destination === "sheets") {
-      currentSheet = null;
-      sheetDirty = false;
-      $("sheetEditorView").classList.add("hidden");
-      $("sheetListView").classList.remove("hidden");
-    }
-
-    setPage(destination);
-  });
+on("registerButton", "click", () => {
+  setAuthMode("register");
+  authenticate();
 });
 
-$("noteForm").addEventListener("submit", saveNote);
-$("cancelEdit").addEventListener("click", resetNoteEditor);
+on("showLoginTab", "click", () => setAuthMode("login"));
+on("showRegisterTab", "click", () => setAuthMode("register"));
+on("logoutButton", "click", logout);
 
-$("newNoteButton").addEventListener("click", () => {
-  resetNoteEditor();
-  $("noteTitle").focus();
-});
+on("noteForm", "submit", saveNote);
 
-$("topNewNote").addEventListener("click", () => {
+// Для старого интерфейса без формы.
+if (!$("noteForm")) {
+  on("saveButton", "click", saveNote);
+}
+
+on("cancelEdit", "click", resetNoteEditor);
+on("notesSearch", "input", renderNotes);
+on("sheetsSearch", "input", renderSheets);
+
+on("newNoteButton", "click", () => {
   resetNoteEditor();
   setPage("notes");
-  $("noteTitle").focus();
 });
 
-$("notesSearch").addEventListener("input", renderNotes);
+on("topNewNote", "click", () => {
+  resetNoteEditor();
+  setPage("notes");
+});
 
-$("refreshButton").addEventListener("click", async () => {
+on("newNoteButton", "click", () => {
+  if ($("noteTitle")) $("noteTitle").focus();
+});
+
+on("refreshButton", "click", async () => {
   await Promise.all([loadNotes(), loadSheets()]);
 });
 
-$("homeNewSheet").addEventListener("click", () => {
-  if (currentSheet && sheetDirty && !window.confirm("Отменить несохранённые изменения и создать таблицу?")) {
-    return;
-  }
-
-  currentSheet = null;
-  sheetDirty = false;
+on("homeNewSheet", "click", async () => {
   setPage("sheets");
-  createSheet();
+  await createSheet();
 });
 
-$("createSheetButton").addEventListener("click", () => {
-  if (currentSheet && sheetDirty && !window.confirm("Отменить несохранённые изменения и создать таблицу?")) {
-    return;
-  }
+on("createSheetButton", "click", createSheet);
+on("backToSheets", "click", closeSheetEditor);
+on("saveSheetButton", "click", saveCurrentSheet);
 
-  currentSheet = null;
-  sheetDirty = false;
-  createSheet();
+on("addRowButton", "click", addRow);
+on("addColButton", "click", addColumn);
+on("deleteRowButton", "click", removeLastRow);
+on("deleteColButton", "click", removeLastColumn);
+
+on("exportXlsxButton", "click", exportXlsx);
+on("exportCsvButton", "click", exportCsv);
+
+on("importSheetInput", "change", (event) => {
+  importSpreadsheet(event.target.files?.[0]);
 });
 
-$("sheetsSearch").addEventListener("input", renderSheets);
-$("backToSheets").addEventListener("click", closeSheetEditor);
-$("saveSheetButton").addEventListener("click", saveCurrentSheet);
-$("addRowButton").addEventListener("click", addRow);
-$("addColButton").addEventListener("click", addColumn);
-$("deleteRowButton").addEventListener("click", removeLastRow);
-$("deleteColButton").addEventListener("click", removeLastColumn);
-$("exportXlsxButton").addEventListener("click", exportXlsx);
-$("exportCsvButton").addEventListener("click", exportCsv);
-
-$("importSheetInput").addEventListener("change", (event) => {
-  importSpreadsheet(event.target.files[0]);
-});
-
-$("sheetNameInput").addEventListener("input", () => {
+on("sheetNameInput", "input", () => {
   if (!currentSheet) return;
 
   currentSheet.name = $("sheetNameInput").value;
-  $("sheetPageHeading").textContent = currentSheet.name || "Без названия";
+  setText("sheetPageHeading", currentSheet.name || "Без названия");
 
   markSheetDirty();
 });
 
-$("spreadsheetGrid").addEventListener("input", (event) => {
+on("spreadsheetGrid", "input", (event) => {
   const input = event.target.closest("[data-cell-row]");
 
   if (!input || !currentSheet) return;
@@ -1213,20 +1325,31 @@ $("spreadsheetGrid").addEventListener("input", (event) => {
   const row = Number(input.dataset.cellRow);
   const col = Number(input.dataset.cellCol);
 
+  if (
+    !Number.isInteger(row) ||
+    !Number.isInteger(col) ||
+    !currentSheet.sheet_data[row]
+  ) {
+    return;
+  }
+
   currentSheet.sheet_data[row][col] = input.value;
   input.classList.add("changed");
 
   markSheetDirty();
 });
 
+/* Делегирование событий: карточки заметок и таблиц. */
 document.addEventListener("click", (event) => {
-  const editButton = event.target.closest("[data-edit-note]");
+  const editNoteButton = event.target.closest("[data-edit-note]");
   const deleteNoteButton = event.target.closest("[data-delete-note]");
   const openSheetButton = event.target.closest("[data-open-sheet]");
   const deleteSheetButton = event.target.closest("[data-delete-sheet]");
+  const navButton = event.target.closest(".nav-btn");
+  const goButton = event.target.closest("[data-go]");
 
-  if (editButton) {
-    editNote(editButton.dataset.editNote);
+  if (editNoteButton) {
+    editNote(editNoteButton.dataset.editNote);
     return;
   }
 
@@ -1246,17 +1369,92 @@ document.addEventListener("click", (event) => {
     );
 
     if (sheet) openSheet(sheet);
+    return;
+  }
+
+  if (navButton) {
+    const destination = navButton.dataset.page;
+
+    if (
+      currentSheet &&
+      sheetDirty &&
+      destination !== "sheets" &&
+      !window.confirm("Есть несохранённые изменения. Перейти без сохранения?")
+    ) {
+      return;
+    }
+
+    setPage(destination);
+    return;
+  }
+
+  if (goButton) {
+    const destination = goButton.dataset.go;
+
+    if (
+      currentSheet &&
+      sheetDirty &&
+      !window.confirm("Есть несохранённые изменения. Перейти без сохранения?")
+    ) {
+      return;
+    }
+
+    currentSheet = null;
+    sheetDirty = false;
+
+    setHidden("sheetEditorView", true);
+    setHidden("sheetListView", false);
+
+    setPage(destination);
   }
 });
 
-$("noteForm").addEventListener("reset", () => {
-  // Никаких дополнительных действий: resetNoteEditor управляет режимом редактора.
-});
+/* -------------------- Главная и статистика -------------------- */
 
-$("logoutButton").addEventListener("click", async () => {
-  // Обработчик выхода находится выше в файле.
-});
+function updateRecentCount() {
+  const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
 
-// -------------------- Запуск приложения --------------------
+  const recentNotes = notes.filter((note) => {
+    const time = new Date(note.updated_at || note.created_at).getTime();
+    return Number.isFinite(time) && time >= weekAgo;
+  }).length;
+
+  const recentSheets = sheets.filter((sheet) => {
+    const time = new Date(sheet.updated_at || sheet.created_at).getTime();
+    return Number.isFinite(time) && time >= weekAgo;
+  }).length;
+
+  setText("homeRecentCount", recentNotes + recentSheets);
+}
+
+/* -------------------- Старт -------------------- */
+
+async function startApp() {
+  if (!initSupabase()) return;
+
+  showMessage(authMessage(), "Проверяем вход...");
+
+  try {
+    const { data, error } = await supabaseClient.auth.getSession();
+
+    if (error) throw error;
+
+    if (data.session?.user) {
+      showApp(data.session.user);
+    } else {
+      showAuth();
+    }
+  } catch (error) {
+    console.error("Ошибка запуска:", error);
+
+    showAuth();
+
+    showMessage(
+      authMessage(),
+      `Не удалось проверить вход: ${error.message}`,
+      true
+    );
+  }
+}
 
 startApp();
